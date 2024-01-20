@@ -28,8 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
 
-//import com.example.measuredatacompose.R
-//import com.example.measuredatacompose.theme.MeasureDataTheme
 
 @Composable
 fun NotSupportedScreen() {

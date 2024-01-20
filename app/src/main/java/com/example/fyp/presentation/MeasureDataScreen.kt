@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.health.services.client.data.DataTypeAvailability
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
@@ -36,7 +35,7 @@ import com.google.accompanist.permissions.isGranted
 @Composable
 fun MeasureDataScreen(
     hr: Long,
-    availability: DataTypeAvailability,
+    //availability: DataTypeAvailability,
     enabled: Boolean,
     onButtonClick: () -> Unit,
     permissionState: PermissionState
@@ -47,7 +46,7 @@ fun MeasureDataScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "This is where the sensor reading should go",
+            text = hr.toString(),
             style = MaterialTheme.typography.display1
         )
         Button(

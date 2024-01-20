@@ -30,9 +30,7 @@ import data.HealthServicesRepository
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MeasureDataApp(
-    healthServicesRepository: HealthServicesRepository
-) {
+fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
     FYPTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -45,7 +43,7 @@ fun MeasureDataApp(
             )
             val enabled by viewModel.enabled.collectAsState()
             val stepsPerMinute by viewModel.stepsPerMinute
-            val availability by viewModel.availability
+            //val availability by viewModel.availability
             val uiState by viewModel.uiState
             val PERMISSION = android.Manifest.permission.BODY_SENSORS
 
@@ -59,7 +57,7 @@ fun MeasureDataApp(
                 )
                 MeasureDataScreen(
                     hr = stepsPerMinute,
-                    availability = availability,
+                    //availability = availability,
                     enabled = enabled,
                     onButtonClick = { viewModel.toggleEnabled() },
                     permissionState = permissionState

@@ -16,6 +16,7 @@
 package com.example.fyp.presentation
 
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.health.services.client.data.DataTypeAvailability
 import androidx.lifecycle.ViewModel
@@ -35,7 +36,7 @@ class MeasureDataViewModel(
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-    val stepsPerMinute: MutableState<Long> = mutableStateOf(0)
+    val stepsPerMinute: MutableState<Long> = mutableLongStateOf(0)
     val availability: MutableState<DataTypeAvailability> =
         mutableStateOf(DataTypeAvailability.UNKNOWN)
 
@@ -76,6 +77,10 @@ class MeasureDataViewModel(
         if (!enabled.value) {
             availability.value = DataTypeAvailability.UNKNOWN
         }
+    }
+
+    fun getReadingsForAuth() {
+
     }
 }
 
