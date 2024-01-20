@@ -17,7 +17,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -103,10 +102,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     override fun onPause() {
         super.onPause()
+
         sensorManager.unregisterListener(this)
     }
 
     private fun updateSensorValues(sensorType: String, sensorValues: String) {
+        //Update sensor values only when steps are detected
+
         when(sensorType){
             "Accelerometer" -> accelerometerValues.text = sensorValues
             "Gyroscope" -> gyroscopeValues.text = sensorValues
