@@ -65,6 +65,10 @@ class MeasureDataViewModel(
                                 is MeasureMessage.MeasureAvailability -> {
                                     availability.value = measureMessage.availability
                                 }
+
+                                else -> {
+                                    // Ignore for now
+                                }
                             }
                         }
                 }
