@@ -54,16 +54,11 @@ class MeasureDataViewModel(
         }
 
         viewModelScope.launch {
-            enabled.collect {
-                if (it) {
-                    healthServicesRepository.detectWalking()
-                        .takeWhile { enabled.value }
-                        .collect { measureMessage ->
-                            if (measureMessage.stepDetected) {
-                                Log.d("MeasureDataViewModel", "Step detected")
-                                startCollectingSensorReadings()
-                            }
-                        }
+            healthServicesRepository.detectWalking()
+            .collect { measureMessage ->
+                if (measureMessage.stepDetected) {
+                    Log.d("MeasureDataViewModel", "Step detected")
+                    startCollectingSensorReadings()
                 }
             }
         }
@@ -103,9 +98,6 @@ class MeasureDataViewModel(
         }
     }
 
-    fun getReadingsForAuth() {
-
-    }
 }
 
 class MeasureDataViewModelFactory(
