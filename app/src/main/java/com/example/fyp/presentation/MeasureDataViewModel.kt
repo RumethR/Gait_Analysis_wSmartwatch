@@ -15,6 +15,7 @@
  */
 package com.example.fyp.presentation
 
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,26 +56,45 @@ class MeasureDataViewModel(
         viewModelScope.launch {
             enabled.collect {
                 if (it) {
-                    healthServicesRepository.walkingDetector()
+                    healthServicesRepository.detectWalking()
                         .takeWhile { enabled.value }
                         .collect { measureMessage ->
-                            when (measureMessage) {
-                                is MeasureMessage.MeasureData -> {
-                                    stepsPerMinute.value = measureMessage.data.last().value
-                                }
-                                is MeasureMessage.MeasureAvailability -> {
-                                    availability.value = measureMessage.availability
-                                }
-
-                                else -> {
-                                    // Ignore for now
-                                }
+                            if (measureMessage.stepDetected) {
+                                Log.d("MeasureDataViewModel", "Step detected")
+                                startCollectingSensorReadings()
                             }
                         }
                 }
             }
         }
     }
+
+    private fun startCollectingSensorReadings() {
+        // Launch a new coroutine to collect sensor readings using the sensorReadings flow
+        viewModelScope.launch {
+            healthServicesRepository.sensorReadings()
+                .takeWhile { enabled.value }
+                .collect { measureMessage ->
+                    // Handle sensor readings here
+                    when (measureMessage) {
+                        is MeasureMessage.MeasureAccelData -> {
+                            // Handle accelerometer data
+                        }
+                        is MeasureMessage.MeasureGyroData -> {
+                            // Handle gyroscope data
+                        }
+                        is MeasureMessage.MeasureMagData -> {
+                            // Handle magnetometer data
+                        }
+                        // Add more cases as needed
+                        else -> {
+                            // Because the condition needs to be exhaustive, add a default case
+                        }
+                    }
+                }
+        }
+    }
+
 
     fun toggleEnabled() {
         enabled.value = !enabled.value
