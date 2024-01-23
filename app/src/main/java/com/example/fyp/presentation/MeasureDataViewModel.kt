@@ -43,6 +43,10 @@ class MeasureDataViewModel(
 
     val uiState: MutableState<UiState> = mutableStateOf(UiState.Startup)
 
+    // Create maps to store accelerometer and gyroscope data (These need to be reset once inferred with)
+    private val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
+    private val gyroscopeData: MutableMap<Long, FloatArray> = HashMap()
+
     init {
         viewModelScope.launch {
             val supported = healthServicesRepository.hasStepDetectionCapability()
