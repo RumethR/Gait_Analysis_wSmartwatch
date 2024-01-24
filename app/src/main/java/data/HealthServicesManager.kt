@@ -35,9 +35,6 @@ class HealthServicesRepository(context: Context) {
     private var gyroscope: Sensor? = null
     private var magnetometer: Sensor? = null
 
-    private var stepCount = 0
-    private var startTime:Long = 0
-
     fun hasStepDetectionCapability(): Boolean {
         // If there is a step detector sensor, then the device probably has an accelerometer and the other necessary sensors as well
         return sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null
@@ -47,28 +44,7 @@ class HealthServicesRepository(context: Context) {
         Log.d("Sampling Rate", "Detect Walking method is being called now")
         val stepDetectorCallback = object : SensorEventCallback() {
             override fun onSensorChanged(event: SensorEvent) {
-                val timestamp = event.timestamp
-                if (stepCount == 0) {
-                    // Record the start time on the first step event
-                    startTime = timestamp
-                }
-
-                // Increment the step count
-                stepCount++
-
-                if (stepCount >= 5 && (timestamp - startTime) < 7_000_000_000L) {
-                    // Send a message or perform an action when the condition is met
-                    trySendBlocking(MeasureMessage.MeasureStepDetection(true))
-                    // Reset the counters
-                    stepCount = 0
-                    startTime = 0
-                    Log.d("Walking Detector", "I THINK YOU ARE WALKING")
-                } else if ((timestamp - startTime) > 10_000_000_000L) {
-                    //reset to default (user might be standing still)
-                    stepCount = 0
-                    startTime = 0
-                }
-
+                trySendBlocking(MeasureMessage.MeasureStepDetection(true, event.timestamp))
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -155,5 +131,5 @@ sealed class MeasureMessage {
     class MeasureAccelData(val accelData: FloatArray, val timestamp: Long) : MeasureMessage() // There will be 3 elements for X, Y and Z
     class MeasureGyroData(val gyroData: FloatArray) : MeasureMessage()
     class MeasureMagData(val magData: FloatArray) : MeasureMessage()
-    class MeasureStepDetection(val stepDetected: Boolean) : MeasureMessage() // Returns true if a step is detected
+    class MeasureStepDetection(val stepDetected: Boolean, val timestamp: Long) : MeasureMessage() // Returns true if a step is detected
 }

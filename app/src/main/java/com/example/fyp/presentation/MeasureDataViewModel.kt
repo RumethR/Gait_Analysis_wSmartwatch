@@ -37,6 +37,9 @@ class MeasureDataViewModel(
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
+    private val userWalking: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isUserWalking: MutableState<Boolean> = mutableStateOf(false)
+
     val stepsPerMinute: MutableState<Long> = mutableLongStateOf(0)
     val availability: MutableState<DataTypeAvailability> =
         mutableStateOf(DataTypeAvailability.UNKNOWN)
@@ -46,6 +49,10 @@ class MeasureDataViewModel(
     // Create maps to store accelerometer and gyroscope data (These need to be reset once inferred with)
     private val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
     private val gyroscopeData: MutableMap<Long, FloatArray> = HashMap()
+
+    //To be used by the walking detector Coroutine
+    private var stepCount = 0
+    private var startTime: Long = 0
 
     init {
         viewModelScope.launch {
@@ -60,11 +67,53 @@ class MeasureDataViewModel(
         viewModelScope.launch {
             healthServicesRepository.detectWalking()
             .collect { measureMessage ->
-                if (measureMessage.stepDetected) {
-                    Log.d("MeasureDataViewModel", "Step detected")
-                    startCollectingSensorReadings()
+                val eventTimeStamp = measureMessage.timestamp
+                if (stepCount == 0) {
+                    // Record the start time on the first step event
+                    startTime = eventTimeStamp
+                }
+
+                // Increment the step count
+                stepCount++
+
+                if (stepCount >= 5 && (eventTimeStamp - startTime) < 7_000_000_000L) {
+                    // startCollectingSensorReadings()
+                    userWalking.value = true
+                    isUserWalking.value = true
+
+                    // Reset the counters
+                    stepCount = 0
+                    startTime = 0
+                } else if ((eventTimeStamp - startTime) > 20_000_000_000L) {
+                    //reset to default (user might be standing still)
+                    stepCount = 0
+                    startTime = 0
+                    isUserWalking.value = false
                 }
             }
+        }
+
+        viewModelScope.launch {
+            healthServicesRepository.sensorReadings()
+                .takeWhile { userWalking.value }
+                .collect { measureMessage ->
+                    // Handle sensor readings here
+                    when (measureMessage) {
+                        is MeasureMessage.MeasureAccelData -> {
+                            Log.d("AccData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
+                        }
+                        is MeasureMessage.MeasureGyroData -> {
+                            // Handle gyroscope data
+                        }
+                        is MeasureMessage.MeasureMagData -> {
+                            // Handle magnetometer data
+                        }
+                        // Add more cases as needed
+                        else -> {
+                            Log.d("MeasureDataViewModel", "Unknown MeasureMessage Returned from Sensor Reading Callback")
+                        }
+                    }
+                }
         }
     }
 
@@ -72,7 +121,7 @@ class MeasureDataViewModel(
         // Launch a new coroutine to collect sensor readings using the sensorReadings flow
         viewModelScope.launch {
             healthServicesRepository.sensorReadings()
-                .takeWhile { enabled.value }
+                .takeWhile { userWalking.value }
                 .collect { measureMessage ->
                     // Handle sensor readings here
                     when (measureMessage) {
