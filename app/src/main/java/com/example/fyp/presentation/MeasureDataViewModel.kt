@@ -17,7 +17,6 @@ package com.example.fyp.presentation
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.health.services.client.data.DataTypeAvailability
 import androidx.lifecycle.ViewModel
@@ -25,22 +24,26 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import data.HealthServicesRepository
 import data.MeasureMessage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 /* */
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MeasureDataViewModel(
     private val healthServicesRepository: HealthServicesRepository
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-    private val userWalking: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isUserWalking: MutableState<Boolean> = mutableStateOf(false)
+    val userWalking: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
-    val stepsPerMinute: MutableState<Long> = mutableLongStateOf(0)
     val availability: MutableState<DataTypeAvailability> =
         mutableStateOf(DataTypeAvailability.UNKNOWN)
 
@@ -67,6 +70,7 @@ class MeasureDataViewModel(
         viewModelScope.launch {
             healthServicesRepository.detectWalking()
             .collect { measureMessage ->
+                Log.d("Message Received ", "Event returned to coroutine")
                 val eventTimeStamp = measureMessage.timestamp
                 if (stepCount == 0) {
                     // Record the start time on the first step event
@@ -77,25 +81,35 @@ class MeasureDataViewModel(
                 stepCount++
 
                 if (stepCount >= 5 && (eventTimeStamp - startTime) < 7_000_000_000L) {
+                    Log.d("Walking", "User is walking.....")
                     // startCollectingSensorReadings()
-                    userWalking.value = true
-                    isUserWalking.value = true
+                    withContext(Dispatchers.Main) {
+                        userWalking.value = true
+                    }
 
                     // Reset the counters
                     stepCount = 0
                     startTime = 0
                 } else if ((eventTimeStamp - startTime) > 20_000_000_000L) {
                     //reset to default (user might be standing still)
+                    Log.d("Timer", "Timer reset.....")
+
                     stepCount = 0
                     startTime = 0
-                    isUserWalking.value = false
+                    withContext(Dispatchers.Main) {
+                        userWalking.value = false
+                    }
                 }
             }
         }
 
-        viewModelScope.launch {
-            healthServicesRepository.sensorReadings()
-                .takeWhile { userWalking.value }
+        // Launch a new coroutine to collect sensor readings using the sensorReadings flow
+        viewModelScope.launch(Dispatchers.Main) {
+            userWalking
+                .filter { it } // Only proceed when userWalking is true
+                .flatMapLatest {
+                    healthServicesRepository.sensorReadings()
+                }
                 .collect { measureMessage ->
                     // Handle sensor readings here
                     when (measureMessage) {
@@ -115,6 +129,7 @@ class MeasureDataViewModel(
                     }
                 }
         }
+
     }
 
     private fun startCollectingSensorReadings() {

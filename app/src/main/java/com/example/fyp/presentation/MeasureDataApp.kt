@@ -42,7 +42,7 @@ fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
                 )
             )
             val enabled by viewModel.enabled.collectAsState()
-            val userActivityState by viewModel.isUserWalking
+            val userActivityState by viewModel.userWalking.collectAsState()
             //val availability by viewModel.availability
             val uiState by viewModel.uiState
             val PERMISSION = android.Manifest.permission.BODY_SENSORS
