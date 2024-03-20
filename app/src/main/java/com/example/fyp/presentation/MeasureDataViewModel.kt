@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MeasureDataViewModel(
-    private val healthServicesRepository: HealthServicesRepository
+    private val sensorServicesRepository: HealthServicesRepository
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
@@ -59,7 +59,7 @@ class MeasureDataViewModel(
 
     init {
         viewModelScope.launch {
-            val supported = healthServicesRepository.hasStepDetectionCapability()
+            val supported = sensorServicesRepository.hasStepDetectionCapability()
             uiState.value = if (supported) {
                 UiState.Supported
             } else {
@@ -68,18 +68,19 @@ class MeasureDataViewModel(
         }
 
         viewModelScope.launch {
-            healthServicesRepository.detectWalking()
+            sensorServicesRepository.detectWalking()
             .collect { measureMessage ->
-                Log.d("Message Received ", "Event returned to coroutine")
+                //Log.d("Message Received ", "Event returned to coroutine")
                 val eventTimeStamp = measureMessage.timestamp
                 if (stepCount == 0) {
                     // Record the start time on the first step event
                     startTime = eventTimeStamp
                 }
 
-                // Increment the step count
+                // Increment the recorded step count
                 stepCount++
 
+                // Required pace = more than 5 steps in less than 7 seconds
                 if (stepCount >= 5 && (eventTimeStamp - startTime) < 7_000_000_000L) {
                     Log.d("Walking", "User is walking.....")
                     // startCollectingSensorReadings()
@@ -96,6 +97,7 @@ class MeasureDataViewModel(
 
                     stepCount = 0
                     startTime = 0
+                    // To alert the UI that the user is not walking
                     withContext(Dispatchers.Main) {
                         userWalking.value = false
                     }
@@ -108,7 +110,7 @@ class MeasureDataViewModel(
             userWalking
                 .filter { it } // Only proceed when userWalking is true
                 .flatMapLatest {
-                    healthServicesRepository.sensorReadings()
+                    sensorServicesRepository.sensorReadings()
                 }
                 .collect { measureMessage ->
                     // Handle sensor readings here
@@ -117,6 +119,7 @@ class MeasureDataViewModel(
                             Log.d("AccData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
                         }
                         is MeasureMessage.MeasureGyroData -> {
+                            Log.d("GyroData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
                             // Handle gyroscope data
                         }
                         is MeasureMessage.MeasureMagData -> {
@@ -135,7 +138,7 @@ class MeasureDataViewModel(
     private fun startCollectingSensorReadings() {
         // Launch a new coroutine to collect sensor readings using the sensorReadings flow
         viewModelScope.launch {
-            healthServicesRepository.sensorReadings()
+            sensorServicesRepository.sensorReadings()
                 .takeWhile { userWalking.value }
                 .collect { measureMessage ->
                     // Handle sensor readings here
@@ -175,7 +178,7 @@ class MeasureDataViewModelFactory(
         if (modelClass.isAssignableFrom(MeasureDataViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return MeasureDataViewModel(
-                healthServicesRepository = healthServicesRepository
+                sensorServicesRepository = healthServicesRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

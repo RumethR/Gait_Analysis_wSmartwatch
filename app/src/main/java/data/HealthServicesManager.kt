@@ -44,6 +44,7 @@ class HealthServicesRepository(context: Context) {
         Log.d("Sampling Rate", "Detect Walking method is being called now")
         val stepDetectorCallback = object : SensorEventCallback() {
             override fun onSensorChanged(event: SensorEvent) {
+                Log.d("Step Sensor", "Step detected at ${event.timestamp}")
                 trySendBlocking(MeasureMessage.MeasureStepDetection(true, event.timestamp))
             }
 
@@ -71,10 +72,10 @@ class HealthServicesRepository(context: Context) {
      * [callbackFlow] is used to bridge between a callback-based API and Kotlin flows.
      */
     fun sensorReadings() = callbackFlow {
-        //Get sensor data from accelerometer, gyroscope and magnetometer
+        //Get sensor data from accelerometer, gyroscope
         val accelerometerCallback = object : SensorEventCallback() {
             override fun onSensorChanged(event: SensorEvent) {
-                Log.d("Accelerometer", "Timestamp: ${event.timestamp} Data: ${event.values[0]}")
+                //Log.d("Accelerometer", "Timestamp: ${event.timestamp} Data: ${event.values[0]}")
 
                 val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
                 accelerometerData[event.timestamp] = event.values
@@ -90,46 +91,32 @@ class HealthServicesRepository(context: Context) {
 
         val gyroscopeCallback = object : SensorEventCallback() {
             override fun onSensorChanged(event: SensorEvent) {
-                trySendBlocking(MeasureMessage.MeasureGyroData(event.values))
+                trySendBlocking(MeasureMessage.MeasureGyroData(event.values, event.timestamp))
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
                 // Do something here if sensor accuracy changes.
             }
         }
-
-        val magnetometerCallback = object : SensorEventCallback() {
-            override fun onSensorChanged(event: SensorEvent) {
-                trySendBlocking(MeasureMessage.MeasureMagData(event.values))
-            }
-
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-                // Do something here if sensor accuracy changes.
-            }
-        }
-
 
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
 
         // Register sensor callbacks
         sensorManager.registerListener(accelerometerCallback, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
         sensorManager.registerListener(gyroscopeCallback, gyroscope, SensorManager.SENSOR_DELAY_NORMAL)
-        sensorManager.registerListener(magnetometerCallback, magnetometer, SensorManager.SENSOR_DELAY_NORMAL)
 
         awaitClose {
             // Unregister sensor callbacks
             sensorManager.unregisterListener(accelerometerCallback)
             sensorManager.unregisterListener(gyroscopeCallback)
-            sensorManager.unregisterListener(magnetometerCallback)
         }
     }
 }
 
 sealed class MeasureMessage {
     class MeasureAccelData(val accelData: FloatArray, val timestamp: Long) : MeasureMessage() // There will be 3 elements for X, Y and Z
-    class MeasureGyroData(val gyroData: FloatArray) : MeasureMessage()
+    class MeasureGyroData(val accelData: FloatArray, val timestamp: Long) : MeasureMessage()
     class MeasureMagData(val magData: FloatArray) : MeasureMessage()
     class MeasureStepDetection(val stepDetected: Boolean, val timestamp: Long) : MeasureMessage() // Returns true if a step is detected
 }
