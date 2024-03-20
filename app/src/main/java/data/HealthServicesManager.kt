@@ -33,7 +33,6 @@ class HealthServicesRepository(context: Context) {
 
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
-    private var magnetometer: Sensor? = null
 
     fun hasStepDetectionCapability(): Boolean {
         // If there is a step detector sensor, then the device probably has an accelerometer and the other necessary sensors as well
@@ -117,6 +116,5 @@ class HealthServicesRepository(context: Context) {
 sealed class MeasureMessage {
     class MeasureAccelData(val accelData: FloatArray, val timestamp: Long) : MeasureMessage() // There will be 3 elements for X, Y and Z
     class MeasureGyroData(val accelData: FloatArray, val timestamp: Long) : MeasureMessage()
-    class MeasureMagData(val magData: FloatArray) : MeasureMessage()
     class MeasureStepDetection(val stepDetected: Boolean, val timestamp: Long) : MeasureMessage() // Returns true if a step is detected
 }
