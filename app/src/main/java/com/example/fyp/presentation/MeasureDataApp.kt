@@ -43,8 +43,8 @@ fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
             )
             val enabled by viewModel.enabled.collectAsState()
             val userActivityState by viewModel.userWalking.collectAsState()
-            //val availability by viewModel.availability
             val uiState by viewModel.uiState
+            val timerState by viewModel.remainingTime
             val PERMISSION = android.Manifest.permission.BODY_SENSORS
 
 
@@ -56,10 +56,10 @@ fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
                     }
                 )
                 MeasureDataScreen(
-                    hr = userActivityState,
-                    //availability = availability,
+                    walkingStatus = userActivityState,
                     enabled = enabled,
                     onButtonClick = { viewModel.toggleEnabled() },
+                    timerStatus = timerState,
                     permissionState = permissionState
                 )
             } else if (uiState == UiState.NotSupported) {

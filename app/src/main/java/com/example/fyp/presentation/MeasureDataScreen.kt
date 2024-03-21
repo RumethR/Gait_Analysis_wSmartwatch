@@ -34,8 +34,8 @@ import com.google.accompanist.permissions.isGranted
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MeasureDataScreen(
-    hr: Boolean,
-    //availability: DataTypeAvailability,
+    walkingStatus: Boolean,
+    timerStatus: String,
     enabled: Boolean,
     onButtonClick: () -> Unit,
     permissionState: PermissionState
@@ -46,8 +46,12 @@ fun MeasureDataScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Is user walking: $hr",
+            text = "Is user walking: $walkingStatus",
             style = MaterialTheme.typography.body1
+        )
+        Text(
+            text = timerStatus,
+            style = MaterialTheme.typography.caption1
         )
         Button(
             modifier = Modifier.fillMaxWidth(0.5f),

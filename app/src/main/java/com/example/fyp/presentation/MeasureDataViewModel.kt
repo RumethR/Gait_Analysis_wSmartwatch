@@ -26,12 +26,11 @@ import data.HealthServicesRepository
 import data.MeasureMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 /* */
@@ -43,6 +42,8 @@ class MeasureDataViewModel(
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val userWalking: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    val remainingTime: MutableState<String> = mutableStateOf("Seconds left: 0")
 
     val availability: MutableState<DataTypeAvailability> =
         mutableStateOf(DataTypeAvailability.UNKNOWN)
@@ -67,98 +68,80 @@ class MeasureDataViewModel(
             }
         }
 
-        viewModelScope.launch {
-            sensorServicesRepository.detectWalking()
-            .collect { measureMessage ->
-                //Log.d("Message Received ", "Event returned to coroutine")
-                val eventTimeStamp = measureMessage.timestamp
-                if (stepCount == 0) {
-                    // Record the start time on the first step event
-                    startTime = eventTimeStamp
-                }
+        if (uiState.value == UiState.Supported) {
 
-                // Increment the recorded step count
-                stepCount++
+            // Coroutine that creates a 7 second timer for checking walking pace
+            viewModelScope.launch(Dispatchers.Main) {
+                while (true) {
+                    for (i in 8 downTo 1) {
+                        remainingTime.value = "Seconds left: $i"
+                        delay(1000)
+                    }
 
-                // Required pace = more than 5 steps in less than 7 seconds
-                if (stepCount >= 5 && (eventTimeStamp - startTime) < 7_000_000_000L) {
-                    Log.d("Walking", "User is walking.....")
-                    // startCollectingSensorReadings()
-                    withContext(Dispatchers.Main) {
+                    if(stepCount>=5){
+                        Log.d("Walking", "User is walking.....")
                         userWalking.value = true
+                        remainingTime.value = "Timer Paused. User is walking..."
+
+                        // 12 Seconds to Collect Acc and Gyro Data
+                        for (j in 12 downTo 1) delay(1000)
                     }
-
-                    // Reset the counters
-                    stepCount = 0
-                    startTime = 0
-                } else if ((eventTimeStamp - startTime) > 20_000_000_000L) {
-                    //reset to default (user might be standing still)
-                    Log.d("Timer", "Timer reset.....")
-
-                    stepCount = 0
-                    startTime = 0
-                    // To alert the UI that the user is not walking
-                    withContext(Dispatchers.Main) {
+                    else{
+                        Log.d("Data", "Data Collection window closed")
                         userWalking.value = false
+                        remainingTime.value = "Timer finished! Resetting Steps..."
+                        stepCount = 0
+                        delay(2000)
                     }
                 }
+
+                // Check how much time has passed since start time
+
+            }
+
+            // Coroutine to collect sensor readings using the detectWalking flow
+            viewModelScope.launch {
+                sensorServicesRepository.detectWalking()
+                    .collect { measureMessage ->
+                        //Log.d("Message Received ", "Event returned to coroutine")
+                        val eventTimeStamp = measureMessage.timestamp
+                        if (stepCount == 0) {
+                            // Record the start time on the first step event
+                            startTime = eventTimeStamp
+                        }
+
+                        // Increment the recorded step count
+                        stepCount++
+                    }
+            }
+
+            // Coroutine to collect sensor readings using the sensorReadings flow
+            viewModelScope.launch {
+                userWalking
+                    .filter { it } // Only proceed when userWalking is true
+                    .flatMapLatest {
+                        sensorServicesRepository.sensorReadings()
+                    }
+                    .collect { measureMessage ->
+                        // Handle sensor readings here
+                        when (measureMessage) {
+                            is MeasureMessage.MeasureAccelData -> {
+                                Log.d("AccData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
+                            }
+                            is MeasureMessage.MeasureGyroData -> {
+                                Log.d("GyroData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
+                                // Handle gyroscope data
+                            }
+                            // Add more cases as needed
+                            else -> {
+                                Log.d("MeasureDataViewModel", "Unknown MeasureMessage Returned from Sensor Reading Callback")
+                            }
+                        }
+                    }
             }
         }
 
-        // Launch a new coroutine to collect sensor readings using the sensorReadings flow
-        viewModelScope.launch(Dispatchers.Main) {
-            userWalking
-                .filter { it } // Only proceed when userWalking is true
-                .flatMapLatest {
-                    sensorServicesRepository.sensorReadings()
-                }
-                .collect { measureMessage ->
-                    // Handle sensor readings here
-                    when (measureMessage) {
-                        is MeasureMessage.MeasureAccelData -> {
-                            Log.d("AccData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
-                        }
-                        is MeasureMessage.MeasureGyroData -> {
-                            Log.d("GyroData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
-                            // Handle gyroscope data
-                        }
-                        is MeasureMessage.MeasureMagData -> {
-                            // Handle magnetometer data
-                        }
-                        // Add more cases as needed
-                        else -> {
-                            Log.d("MeasureDataViewModel", "Unknown MeasureMessage Returned from Sensor Reading Callback")
-                        }
-                    }
-                }
-        }
 
-    }
-
-    private fun startCollectingSensorReadings() {
-        // Launch a new coroutine to collect sensor readings using the sensorReadings flow
-        viewModelScope.launch {
-            sensorServicesRepository.sensorReadings()
-                .takeWhile { userWalking.value }
-                .collect { measureMessage ->
-                    // Handle sensor readings here
-                    when (measureMessage) {
-                        is MeasureMessage.MeasureAccelData -> {
-                            // Handle accelerometer data
-                        }
-                        is MeasureMessage.MeasureGyroData -> {
-                            // Handle gyroscope data
-                        }
-                        is MeasureMessage.MeasureMagData -> {
-                            // Handle magnetometer data
-                        }
-                        // Add more cases as needed
-                        else -> {
-                            // Because the condition needs to be exhaustive, add a default case
-                        }
-                    }
-                }
-        }
     }
 
 

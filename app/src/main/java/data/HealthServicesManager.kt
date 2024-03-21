@@ -101,11 +101,12 @@ class HealthServicesRepository(context: Context) {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
-        // Register sensor callbacks
-        sensorManager.registerListener(accelerometerCallback, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
-        sensorManager.registerListener(gyroscopeCallback, gyroscope, SensorManager.SENSOR_DELAY_NORMAL)
+        // Register sensor callbacks - Using a 50000 microsecond delay (20Hz)
+        sensorManager.registerListener(accelerometerCallback, accelerometer, 50000)
+        sensorManager.registerListener(gyroscopeCallback, gyroscope, 50000)
 
         awaitClose {
+            Log.d("SensorReadings", "Unregistering sensor readings")
             // Unregister sensor callbacks
             sensorManager.unregisterListener(accelerometerCallback)
             sensorManager.unregisterListener(gyroscopeCallback)
