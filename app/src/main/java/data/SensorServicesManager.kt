@@ -26,7 +26,7 @@ import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.runBlocking
 
-class HealthServicesRepository(context: Context) {
+class SensorServicesRepository(context: Context) {
     private var sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private var stepDetector: Sensor? = null
@@ -101,12 +101,16 @@ class HealthServicesRepository(context: Context) {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
 
+        //Flushing the sensors to clear any existing buffered data from a previous session
+        sensorManager.flush(accelerometerCallback)
+        sensorManager.flush(gyroscopeCallback)
+
         // Register sensor callbacks - Using a 50000 microsecond delay (20Hz)
         sensorManager.registerListener(accelerometerCallback, accelerometer, 50000)
         sensorManager.registerListener(gyroscopeCallback, gyroscope, 50000)
 
         awaitClose {
-            Log.d("SensorReadings", "Unregistering sensor readings")
+            Log.d("SensorReadings", "Unregistering sensor listeners")
             // Unregister sensor callbacks
             sensorManager.unregisterListener(accelerometerCallback)
             sensorManager.unregisterListener(gyroscopeCallback)

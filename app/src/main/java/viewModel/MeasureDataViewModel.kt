@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.fyp.presentation
+package viewModel
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
@@ -22,14 +22,16 @@ import androidx.health.services.client.data.DataTypeAvailability
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import data.HealthServicesRepository
 import data.MeasureMessage
+import data.SensorDataManager
+import data.SensorServicesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 
 
@@ -37,7 +39,8 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MeasureDataViewModel(
-    private val sensorServicesRepository: HealthServicesRepository
+    private val sensorServicesRepository: SensorServicesRepository,
+    private val sensorDataManager: SensorDataManager
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
@@ -74,28 +77,29 @@ class MeasureDataViewModel(
             viewModelScope.launch(Dispatchers.Main) {
                 while (true) {
                     for (i in 8 downTo 1) {
-                        remainingTime.value = "Seconds left: $i"
+                        remainingTime.value = "Idle timer ($i)secs left"
                         delay(1000)
                     }
 
                     if(stepCount>=5){
                         Log.d("Walking", "User is walking.....")
                         userWalking.value = true
-                        remainingTime.value = "Timer Paused. User is walking..."
 
                         // 12 Seconds to Collect Acc and Gyro Data
-                        for (j in 12 downTo 1) delay(1000)
-                    }
-                    else{
-                        Log.d("Data", "Data Collection window closed")
-                        userWalking.value = false
-                        remainingTime.value = "Timer finished! Resetting Steps..."
-                        stepCount = 0
-                        delay(2000)
-                    }
-                }
+                        Log.d("Data", "Started To collect data")
+                        for (j in 13 downTo 1) {
+                            delay(1000)
+                            remainingTime.value = "Collecting data ($j)secs left"
+                        }
 
-                // Check how much time has passed since start time
+                    }
+                    Log.d("Data", "Data Collection window closed")
+                    remainingTime.value = "Resetting Timer"
+                    stepCount = 0
+                    delay(2000)
+                    userWalking.value = false
+
+                }
 
             }
 
@@ -122,20 +126,35 @@ class MeasureDataViewModel(
                     .flatMapLatest {
                         sensorServicesRepository.sensorReadings()
                     }
+                    .takeWhile {
+                        val shouldContinue = !(accelerometerData.size >= 200 && gyroscopeData.size >= 200)
+                        if (!shouldContinue) {
+                            Log.d("TakeWhile", "Exiting takeWhile: Accelerometer size = ${accelerometerData.size}, Gyroscope size = ${gyroscopeData.size}")
+                        }
+                        shouldContinue
+                    }
                     .collect { measureMessage ->
                         // Handle sensor readings here
                         when (measureMessage) {
                             is MeasureMessage.MeasureAccelData -> {
                                 Log.d("AccData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
+                                accelerometerData[measureMessage.timestamp] = floatArrayOf(measureMessage.accelData[0], measureMessage.accelData[1], measureMessage.accelData[2])
+                                println("Current AccelData Length: ${accelerometerData.size}")
+                                //sensorDataManager.preprocessSensorData()
                             }
                             is MeasureMessage.MeasureGyroData -> {
                                 Log.d("GyroData", "Timestamp: ${measureMessage.timestamp}, X: ${measureMessage.accelData[0]},  Y: ${measureMessage.accelData[1]}, Z: ${measureMessage.accelData[2]}")
-                                // Handle gyroscope data
+                                gyroscopeData[measureMessage.timestamp] = floatArrayOf(measureMessage.accelData[0], measureMessage.accelData[1], measureMessage.accelData[2])
                             }
-                            // Add more cases as needed
                             else -> {
                                 Log.d("MeasureDataViewModel", "Unknown MeasureMessage Returned from Sensor Reading Callback")
                             }
+                        }
+                        if (accelerometerData.size >= 200 && gyroscopeData.size >= 200) {
+                            Log.d("SensorData", "Data Collection Limit Reached, Preprocessing Data...")
+                            sensorDataManager.preprocessSensorData(accelerometerData, gyroscopeData)
+                            accelerometerData.clear()
+                            gyroscopeData.clear()
                         }
                     }
             }
@@ -155,13 +174,15 @@ class MeasureDataViewModel(
 }
 
 class MeasureDataViewModelFactory(
-    private val healthServicesRepository: HealthServicesRepository
+    private val sensorServicesRepository: SensorServicesRepository,
+    private val sensorDataManager: SensorDataManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MeasureDataViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return MeasureDataViewModel(
-                sensorServicesRepository = healthServicesRepository
+                sensorServicesRepository = sensorServicesRepository,
+                sensorDataManager = sensorDataManager
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

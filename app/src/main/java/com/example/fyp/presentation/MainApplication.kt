@@ -16,11 +16,18 @@
 package com.example.fyp.presentation
 
 import android.app.Application
-import data.HealthServicesRepository
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
+import data.SensorDataManager
+import data.SensorServicesRepository
 
-const val TAG = "Measure Data Sample"
-const val PERMISSION = android.Manifest.permission.BODY_SENSORS
+private const val SENSOR_DATA_STORE_NAME = "sensor_data"
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = SENSOR_DATA_STORE_NAME)
 
 class MainApplication : Application() {
-    val healthServicesRepository by lazy { HealthServicesRepository(this) }
+    val dataStoreRepository by lazy { SensorDataManager(this, dataStore) }
+    val sensorServicesRepository by lazy { SensorServicesRepository(this) }
 }

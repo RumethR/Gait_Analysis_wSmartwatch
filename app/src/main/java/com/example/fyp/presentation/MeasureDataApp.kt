@@ -26,11 +26,15 @@ import androidx.wear.compose.material.TimeText
 import com.example.fyp.presentation.theme.FYPTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
-import data.HealthServicesRepository
+import data.SensorDataManager
+import data.SensorServicesRepository
+import viewModel.MeasureDataViewModel
+import viewModel.MeasureDataViewModelFactory
+import viewModel.UiState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
+fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDataManager: SensorDataManager) {
     FYPTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -38,7 +42,8 @@ fun MeasureDataApp(healthServicesRepository: HealthServicesRepository) {
         ) {
             val viewModel: MeasureDataViewModel = viewModel(
                 factory = MeasureDataViewModelFactory(
-                    healthServicesRepository = healthServicesRepository
+                    sensorDataManager = sensorDataManager,
+                    sensorServicesRepository = sensorServicesRepository
                 )
             )
             val enabled by viewModel.enabled.collectAsState()

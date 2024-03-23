@@ -22,13 +22,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val healthServicesRepository = (application as MainApplication).healthServicesRepository
+        val sensorServicesRepository = (application as MainApplication).sensorServicesRepository
+        val dataStoreRepository = (application as MainApplication).dataStoreRepository
 
         // Initialize the ActivityResultLauncher for requesting permissions
         requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
                 setContent {
-                    MeasureDataApp(healthServicesRepository = healthServicesRepository)
+                    MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository)
                 }
             } else {
                 // Permission denied, Inform the user
@@ -42,11 +43,11 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(ACTIVITY_RECOGNITION)
         } else {
             setContent {
-                MeasureDataApp(healthServicesRepository = healthServicesRepository)
+                MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository)
             }
         }
 
         // Keep the screen on
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }
