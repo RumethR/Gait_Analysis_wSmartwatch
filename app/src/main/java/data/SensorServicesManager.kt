@@ -74,11 +74,6 @@ class SensorServicesRepository(context: Context) {
         //Get sensor data from accelerometer, gyroscope
         val accelerometerCallback = object : SensorEventCallback() {
             override fun onSensorChanged(event: SensorEvent) {
-                //Log.d("Accelerometer", "Timestamp: ${event.timestamp} Data: ${event.values[0]}")
-
-                val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
-                accelerometerData[event.timestamp] = event.values
-
                 // use event.timestamp to get the timestamp of the event
                 trySendBlocking(MeasureMessage.MeasureAccelData(event.values, event.timestamp))
             }

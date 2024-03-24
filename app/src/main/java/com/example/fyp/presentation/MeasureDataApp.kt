@@ -46,9 +46,9 @@ fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDat
                     sensorServicesRepository = sensorServicesRepository
                 )
             )
-            val enabled by viewModel.enabled.collectAsState()
             val userActivityState by viewModel.userWalking.collectAsState()
             val uiState by viewModel.uiState
+            val enrollmentState by viewModel.enrolledData
             val timerState by viewModel.remainingTime
             val PERMISSION = android.Manifest.permission.BODY_SENSORS
 
@@ -62,8 +62,8 @@ fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDat
                 )
                 MeasureDataScreen(
                     walkingStatus = userActivityState,
-                    enabled = enabled,
-                    onButtonClick = { viewModel.toggleEnabled() },
+                    dataEnrolled = enrollmentState,
+                    onButtonClick = { viewModel.resetData() },
                     timerStatus = timerState,
                     permissionState = permissionState
                 )

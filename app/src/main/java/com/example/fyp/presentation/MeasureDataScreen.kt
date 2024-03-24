@@ -19,24 +19,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.example.fyp.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
-import com.google.accompanist.permissions.isGranted
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MeasureDataScreen(
     walkingStatus: Boolean,
     timerStatus: String,
-    enabled: Boolean,
+    dataEnrolled: Boolean,
     onButtonClick: () -> Unit,
     permissionState: PermissionState
 ) {
@@ -47,28 +50,42 @@ fun MeasureDataScreen(
     ) {
         Text(
             text = "Is user walking: $walkingStatus",
-            style = MaterialTheme.typography.body1
+            style = MaterialTheme.typography.body1,
+            fontSize = 13.sp
         )
+
         Text(
-            text = timerStatus,
-            style = MaterialTheme.typography.caption1
+            text = "Authentication Status: N/A",
+            style = MaterialTheme.typography.body1,
+            fontSize = 14.sp
         )
-        Button(
-            modifier = Modifier.fillMaxWidth(0.5f),
-            onClick = {
-                if (permissionState.status.isGranted) {
-                    onButtonClick()
-                } else {
-                    permissionState.launchPermissionRequest()
-                }
+
+        Text(
+            modifier = Modifier.padding(bottom = 10.dp),
+            text = timerStatus,
+            style = MaterialTheme.typography.caption1,
+            fontSize = 10.sp
+        )
+
+        if (dataEnrolled){
+                    Button(
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .padding(vertical = 10.dp)
+                            .height(30.dp),
+                        onClick = { onButtonClick() }
+            ) {
+                Text(
+                    fontSize = 12.sp,
+                    text = stringResource(R.string.reset)
+                )
             }
-        ) {
-            val buttonTextId = if (enabled) {
-                R.string.stop
-            } else {
-                R.string.start
-            }
-            Text(stringResource(buttonTextId))
         }
+
+        Text(
+            text = "Enrollment status: $dataEnrolled",
+            style = MaterialTheme.typography.caption1,
+            fontSize = 8.sp
+        )
     }
 }

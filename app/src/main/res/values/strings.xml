@@ -7,5 +7,6 @@
 
     <string name="start">Start</string>
     <string name="stop">Stop</string>
-    <string name="hello_world">From the Square world,\nHello, %1$s!</string>
+    <string name="reset">Reset Data</string>
+    <string name="authStatus">Authentication Status</string>
 </resources>

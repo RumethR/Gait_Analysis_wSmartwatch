@@ -53,6 +53,8 @@ class MeasureDataViewModel(
 
     val uiState: MutableState<UiState> = mutableStateOf(UiState.Startup)
 
+    val enrolledData: MutableState<Boolean> = mutableStateOf(false)
+
     // Create maps to store accelerometer and gyroscope data (These need to be reset once inferred with)
     private val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
     private val gyroscopeData: MutableMap<Long, FloatArray> = HashMap()
@@ -72,6 +74,16 @@ class MeasureDataViewModel(
         }
 
         if (uiState.value == UiState.Supported) {
+
+            viewModelScope.launch(Dispatchers.IO) {
+                Log.d("Data", "Checking if data is enrolled")
+                sensorDataManager.fetchSensorDataFromDataStore().collect { sensorData ->
+                    Log.d("Data", "$sensorData")
+                    if (sensorData.isNotEmpty()) {
+                        enrolledData.value = true
+                    }
+                }
+            }
 
             // Coroutine that creates a 7 second timer for checking walking pace
             viewModelScope.launch(Dispatchers.Main) {
@@ -129,7 +141,9 @@ class MeasureDataViewModel(
                     .takeWhile {
                         val shouldContinue = !(accelerometerData.size >= 200 && gyroscopeData.size >= 200)
                         if (!shouldContinue) {
-                            Log.d("TakeWhile", "Exiting takeWhile: Accelerometer size = ${accelerometerData.size}, Gyroscope size = ${gyroscopeData.size}")
+                            sensorDataManager.preprocessSensorData(accelerometerData, gyroscopeData)
+                            accelerometerData.clear()
+                            gyroscopeData.clear()
                         }
                         shouldContinue
                     }
@@ -152,9 +166,7 @@ class MeasureDataViewModel(
                         }
                         if (accelerometerData.size >= 200 && gyroscopeData.size >= 200) {
                             Log.d("SensorData", "Data Collection Limit Reached, Preprocessing Data...")
-                            sensorDataManager.preprocessSensorData(accelerometerData, gyroscopeData)
-                            accelerometerData.clear()
-                            gyroscopeData.clear()
+
                         }
                     }
             }
@@ -168,6 +180,14 @@ class MeasureDataViewModel(
         enabled.value = !enabled.value
         if (!enabled.value) {
             availability.value = DataTypeAvailability.UNKNOWN
+        }
+    }
+
+    fun resetData() {
+        viewModelScope.launch {
+            sensorDataManager.resetSensorData()
+            Log.d("Data", "Enrolled Data is Deleted")
+            enrolledData.value = false
         }
     }
 
