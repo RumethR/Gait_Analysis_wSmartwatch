@@ -20,6 +20,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import data.ModelManager
 import data.SensorDataManager
 import data.SensorServicesRepository
 
@@ -30,4 +31,5 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = SEN
 class MainApplication : Application() {
     val dataStoreRepository by lazy { SensorDataManager(this, dataStore) }
     val sensorServicesRepository by lazy { SensorServicesRepository(this) }
+    val modelManager by lazy { ModelManager(this) }
 }

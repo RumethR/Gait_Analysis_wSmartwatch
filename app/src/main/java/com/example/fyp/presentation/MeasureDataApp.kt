@@ -26,6 +26,7 @@ import androidx.wear.compose.material.TimeText
 import com.example.fyp.presentation.theme.FYPTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import data.ModelManager
 import data.SensorDataManager
 import data.SensorServicesRepository
 import viewModel.MeasureDataViewModel
@@ -34,7 +35,7 @@ import viewModel.UiState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDataManager: SensorDataManager) {
+fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDataManager: SensorDataManager, modelManager: ModelManager) {
     FYPTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
@@ -43,12 +44,13 @@ fun MeasureDataApp(sensorServicesRepository: SensorServicesRepository, sensorDat
             val viewModel: MeasureDataViewModel = viewModel(
                 factory = MeasureDataViewModelFactory(
                     sensorDataManager = sensorDataManager,
-                    sensorServicesRepository = sensorServicesRepository
+                    sensorServicesRepository = sensorServicesRepository,
+                    modelManager = modelManager
                 )
             )
             val userActivityState by viewModel.userWalking.collectAsState()
             val uiState by viewModel.uiState
-            val enrollmentState by viewModel.enrolledData
+            val enrollmentState by viewModel.isDataEnrolled
             val timerState by viewModel.remainingTime
             val PERMISSION = android.Manifest.permission.BODY_SENSORS
 

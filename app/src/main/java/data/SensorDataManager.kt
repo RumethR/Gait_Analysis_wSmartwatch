@@ -8,14 +8,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class SensorDataManager(context: Context, private val dataStore: DataStore<Preferences>) {
 
     /* The key will be the timestamp and the values will be both the gyro and acc values combined */
 
-    private suspend fun saveSensorDataToDataStore(sensorData: MutableMap<Long, FloatArray>) {
+    suspend fun saveSensorDataToDataStore(sensorData: MutableMap<Long, FloatArray>) {
         dataStore.edit { preferences ->
             sensorData.forEach { (timestamp, values) ->
                 val dataString = values.joinToString(separator = ",") { it.toString() }
@@ -42,19 +41,14 @@ class SensorDataManager(context: Context, private val dataStore: DataStore<Prefe
         }
     }
 
-    fun preprocessSensorData(accelerometerData: MutableMap<Long, FloatArray>, gyroscopeData: MutableMap<Long, FloatArray>) {
+    fun preprocessSensorData(accelerometerData: MutableMap<Long, FloatArray>, gyroscopeData: MutableMap<Long, FloatArray>): MutableMap<Long, FloatArray> {
         // Perform a first-order low-pass filter on the accelerometer and gyroscope data
         val filteredAccData = lowPassFilter(accelerometerData)
         val filteredGyroData = lowPassFilter(gyroscopeData)
 
         //exportToTxt(accelerometerData, gyroscopeData) // REQUIRES FILE STORAGE PERMISSIONS
 
-        val filteredCombinedSensorData = combineSensorData(filteredGyroData, filteredAccData)
-
-        runBlocking {
-            println("Saving sensor data to data store")
-            saveSensorDataToDataStore(filteredCombinedSensorData)
-        }
+        return combineSensorData(filteredGyroData, filteredAccData)
     }
 
     private fun combineSensorData(gyroData: MutableMap<Long, FloatArray>, accData: MutableMap<Long, FloatArray>): MutableMap<Long, FloatArray> {

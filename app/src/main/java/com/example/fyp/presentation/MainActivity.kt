@@ -24,12 +24,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val sensorServicesRepository = (application as MainApplication).sensorServicesRepository
         val dataStoreRepository = (application as MainApplication).dataStoreRepository
+        val modelManager = (application as MainApplication).modelManager
+
+        //Read the tfLite model from assets
+
 
         // Initialize the ActivityResultLauncher for requesting permissions
         requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
                 setContent {
-                    MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository)
+                    MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository, modelManager = modelManager)
                 }
             } else {
                 // Permission denied, Inform the user
@@ -43,7 +47,7 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(ACTIVITY_RECOGNITION)
         } else {
             setContent {
-                MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository)
+                MeasureDataApp(sensorServicesRepository = sensorServicesRepository, sensorDataManager = dataStoreRepository, modelManager = modelManager)
             }
         }
 

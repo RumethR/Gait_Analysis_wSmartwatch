@@ -23,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import data.MeasureMessage
+import data.ModelManager
 import data.SensorDataManager
 import data.SensorServicesRepository
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class MeasureDataViewModel(
     private val sensorServicesRepository: SensorServicesRepository,
-    private val sensorDataManager: SensorDataManager
+    private val sensorDataManager: SensorDataManager,
+    private val modelManager: ModelManager
 ) : ViewModel() {
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
@@ -53,11 +55,15 @@ class MeasureDataViewModel(
 
     val uiState: MutableState<UiState> = mutableStateOf(UiState.Startup)
 
-    val enrolledData: MutableState<Boolean> = mutableStateOf(false)
+    val isDataEnrolled: MutableState<Boolean> = mutableStateOf(false)
+    private var enrolledData: Map<Long, FloatArray> = HashMap()
 
     // Create maps to store accelerometer and gyroscope data (These need to be reset once inferred with)
     private val accelerometerData: MutableMap<Long, FloatArray> = HashMap()
     private val gyroscopeData: MutableMap<Long, FloatArray> = HashMap()
+
+    // A map to store the preprocessed sensor data for inference
+    private var preprocessedSensorData: MutableMap<Long, FloatArray> = HashMap()
 
     //To be used by the walking detector Coroutine
     private var stepCount = 0
@@ -75,12 +81,15 @@ class MeasureDataViewModel(
 
         if (uiState.value == UiState.Supported) {
 
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 Log.d("Data", "Checking if data is enrolled")
                 sensorDataManager.fetchSensorDataFromDataStore().collect { sensorData ->
                     Log.d("Data", "$sensorData")
                     if (sensorData.isNotEmpty()) {
-                        enrolledData.value = true
+                        isDataEnrolled.value = true
+                        enrolledData = sensorData
+                    } else {
+                        isDataEnrolled.value = false
                     }
                 }
             }
@@ -141,7 +150,16 @@ class MeasureDataViewModel(
                     .takeWhile {
                         val shouldContinue = !(accelerometerData.size >= 200 && gyroscopeData.size >= 200)
                         if (!shouldContinue) {
-                            sensorDataManager.preprocessSensorData(accelerometerData, gyroscopeData)
+                            Log.d("SensorData", "Data Collection Limit Reached, Preprocessing Data...")
+                            preprocessedSensorData = sensorDataManager.preprocessSensorData(accelerometerData, gyroscopeData)
+                            if (isDataEnrolled.value) {
+                                // Run inference on the preprocessed data
+                                val enrolledForInference = modelManager.prepareInputsForInference(enrolledData.toMutableMap())
+                                val realTimeSensorDataForInference = modelManager.prepareInputsForInference(preprocessedSensorData)
+                                modelManager.runInference(enrolledForInference, realTimeSensorDataForInference)
+                            } else {
+                                sensorDataManager.saveSensorDataToDataStore(preprocessedSensorData)
+                            }
                             accelerometerData.clear()
                             gyroscopeData.clear()
                         }
@@ -164,10 +182,6 @@ class MeasureDataViewModel(
                                 Log.d("MeasureDataViewModel", "Unknown MeasureMessage Returned from Sensor Reading Callback")
                             }
                         }
-                        if (accelerometerData.size >= 200 && gyroscopeData.size >= 200) {
-                            Log.d("SensorData", "Data Collection Limit Reached, Preprocessing Data...")
-
-                        }
                     }
             }
         }
@@ -187,7 +201,7 @@ class MeasureDataViewModel(
         viewModelScope.launch {
             sensorDataManager.resetSensorData()
             Log.d("Data", "Enrolled Data is Deleted")
-            enrolledData.value = false
+            isDataEnrolled.value = false
         }
     }
 
@@ -195,14 +209,16 @@ class MeasureDataViewModel(
 
 class MeasureDataViewModelFactory(
     private val sensorServicesRepository: SensorServicesRepository,
-    private val sensorDataManager: SensorDataManager
+    private val sensorDataManager: SensorDataManager,
+    private val modelManager: ModelManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MeasureDataViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return MeasureDataViewModel(
                 sensorServicesRepository = sensorServicesRepository,
-                sensorDataManager = sensorDataManager
+                sensorDataManager = sensorDataManager,
+                modelManager = modelManager
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
