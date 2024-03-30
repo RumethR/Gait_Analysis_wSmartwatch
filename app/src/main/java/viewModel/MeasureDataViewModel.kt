@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.minutes
 
 
 /* */
@@ -157,6 +158,7 @@ class MeasureDataViewModel(
                                 val enrolledForInference = modelManager.prepareInputsForInference(enrolledData.toMutableMap())
                                 val realTimeSensorDataForInference = modelManager.prepareInputsForInference(preprocessedSensorData)
                                 modelManager.runInference(enrolledForInference, realTimeSensorDataForInference)
+                                delay(1.minutes)
                             } else {
                                 sensorDataManager.saveSensorDataToDataStore(preprocessedSensorData)
                             }

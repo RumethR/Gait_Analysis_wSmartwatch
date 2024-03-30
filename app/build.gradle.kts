@@ -71,6 +71,7 @@ dependencies {
     implementation ("androidx.health:health-services-client:1.0.0-rc01")
     implementation ("org.tensorflow:tensorflow-lite:2.15.0")
     implementation ("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.15.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.03.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")

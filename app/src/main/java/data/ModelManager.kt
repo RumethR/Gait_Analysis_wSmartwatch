@@ -19,12 +19,23 @@ class ModelManager(private val context: Context) {
         val interpreter = loadModelFile()
 
         // Allocate tensors for the inputs and outputs
-        val inputShape = interpreter.getInputTensor(0).shape()
-        val outputShape = interpreter.getOutputTensor(0).shape()
+        val inputShape = interpreter.getInputTensor(0).shape() //[1,200,6], FLOAT32
+        val outputShape = interpreter.getOutputTensor(0).shape() //[1,1]
 
         val inputBuffer1 = TensorBuffer.createFixedSize(inputShape, interpreter.getInputTensor(0).dataType())
         val inputBuffer2 = TensorBuffer.createFixedSize(inputShape, interpreter.getInputTensor(1).dataType())
         val outputBuffer = TensorBuffer.createFixedSize(outputShape, interpreter.getOutputTensor(0).dataType())
+
+        println("Input Buffer flat size: ${inputBuffer1.flatSize}")
+        println("Input data size: ${input1.size}")
+        inputBuffer1.loadArray(input1)
+
+        // Run inference for both inputs
+        interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer1.buffer, inputBuffer2.buffer), mapOf(0 to outputBuffer.buffer))
+
+        // Get the output
+        val output = outputBuffer.getFloatValue(0)
+        println("Similarity Output: $output")
 
         return ""
     }
