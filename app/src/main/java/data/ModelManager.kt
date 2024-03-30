@@ -1,6 +1,7 @@
 package data
 
 import android.content.Context
+import android.util.Log
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
@@ -26,18 +27,19 @@ class ModelManager(private val context: Context) {
         val inputBuffer2 = TensorBuffer.createFixedSize(inputShape, interpreter.getInputTensor(1).dataType())
         val outputBuffer = TensorBuffer.createFixedSize(outputShape, interpreter.getOutputTensor(0).dataType())
 
-        println("Input Buffer flat size: ${inputBuffer1.flatSize}")
-        println("Input data size: ${input1.size}")
         inputBuffer1.loadArray(input1)
+        inputBuffer2.loadArray(input2)
 
         // Run inference for both inputs
         interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer1.buffer, inputBuffer2.buffer), mapOf(0 to outputBuffer.buffer))
 
         // Get the output
         val output = outputBuffer.getFloatValue(0)
-        println("Similarity Output: $output")
 
-        return ""
+        //Release the resources of the interpreter
+        interpreter.close()
+
+        return readOutputsFromInference(output)
     }
 
     fun prepareInputsForInference(map: MutableMap<Long, FloatArray>): FloatArray {
@@ -59,8 +61,9 @@ class ModelManager(private val context: Context) {
 
         return targetArray
     }
-    fun readOutputsFromInference(): Any {
-        // Prepare outputs for inference
-        return Any()
+    private fun readOutputsFromInference(outputResult: Float): String {
+        // Read the output from the inference
+        Log.d("ModelManager", "Similarity Output: $outputResult")
+        return ""
     }
 }

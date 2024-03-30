@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.minutes
 
 
 /* */
@@ -48,6 +47,7 @@ class MeasureDataViewModel(
     val enabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val userWalking: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val authTimeout: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val remainingTime: MutableState<String> = mutableStateOf("Seconds left: 0")
 
@@ -97,32 +97,30 @@ class MeasureDataViewModel(
 
             // Coroutine that creates a 7 second timer for checking walking pace
             viewModelScope.launch(Dispatchers.Main) {
-                while (true) {
+                while (!authTimeout.value) {
                     for (i in 8 downTo 1) {
                         remainingTime.value = "Idle timer ($i)secs left"
                         delay(1000)
-                    }
+                        if(stepCount>=5){
+                            Log.d("Walking", "User is walking.....")
+                            userWalking.value = true
 
-                    if(stepCount>=5){
-                        Log.d("Walking", "User is walking.....")
-                        userWalking.value = true
-
-                        // 12 Seconds to Collect Acc and Gyro Data
-                        Log.d("Data", "Started To collect data")
-                        for (j in 13 downTo 1) {
-                            delay(1000)
-                            remainingTime.value = "Collecting data ($j)secs left"
+                            // 12 Seconds to Collect Acc and Gyro Data
+                            Log.d("Data", "Started To collect data")
+                            for (j in 13 downTo 1) {
+                                delay(1000)
+                                remainingTime.value = "Collecting data ($j)secs left"
+                            }
+                            break
                         }
-
                     }
+
                     Log.d("Data", "Data Collection window closed")
                     remainingTime.value = "Resetting Timer"
                     stepCount = 0
                     delay(2000)
                     userWalking.value = false
-
                 }
-
             }
 
             // Coroutine to collect sensor readings using the detectWalking flow
@@ -158,7 +156,6 @@ class MeasureDataViewModel(
                                 val enrolledForInference = modelManager.prepareInputsForInference(enrolledData.toMutableMap())
                                 val realTimeSensorDataForInference = modelManager.prepareInputsForInference(preprocessedSensorData)
                                 modelManager.runInference(enrolledForInference, realTimeSensorDataForInference)
-                                delay(1.minutes)
                             } else {
                                 sensorDataManager.saveSensorDataToDataStore(preprocessedSensorData)
                             }
