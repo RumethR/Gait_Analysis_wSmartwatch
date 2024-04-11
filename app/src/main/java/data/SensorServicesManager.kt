@@ -66,7 +66,7 @@ class SensorServicesRepository(context: Context) {
     /**
      * Returns a cold flow. When activated, the flow will register a callback for sensor data
      * and start to emit messages. When the consuming coroutine is cancelled, the measure callback
-     * is unregistered.
+     * is unregistered (along with the sensor listeners).
      *
      * [callbackFlow] is used to bridge between a callback-based API and Kotlin flows.
      */
